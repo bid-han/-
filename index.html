@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Website</title>
+    <link rel="shortcut icon" type="x-icon" href="1.png">
+    <title>Quiz Website By Bidhan Acharya</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -196,6 +197,14 @@ body {
         pointer-events: none;
         z-index: 1000;
     }
+    footer{
+    margin-left: -640px;
+    margin-bottom: -569px;
+    font-family: TimesNewRomen;
+    font-size: 18px;
+    color: white;
+
+    }
     </style>
 </head>
 <body class="bg-gradient-to-b from-blue-200 to-blue-500">
@@ -254,6 +263,7 @@ body {
         <button id="restart" style="display:none;" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Restart</button>
         <div id="error-message" style="display:none;"></div>
     </div>
+
     <script>
         const quizHeader = document.getElementById('quiz-header');
         const questionEl = document.getElementById('question');
@@ -524,5 +534,6 @@ body {
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.0/dist/confetti.browser.min.js"></script>
+    <footer>Copyright © 2024 - 2025 BidhanAcharya®. All rights reserved.</footer>
 </body>
 </html>
