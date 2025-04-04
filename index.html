@@ -9,10 +9,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
     <style>
         body {
             font-family: 'Nunito', sans-serif;
-            background: linear-gradient(135deg, #4facfe, #00f2fe, #ff6ec7);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -21,6 +21,16 @@
             padding-bottom: 40px;
             overflow-y: auto;
             color: #555;
+        }
+
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            background: linear-gradient(135deg, #4facfe, #00f2fe, #ff6ec7);
         }
 
         .quiz-container {
@@ -232,7 +242,41 @@
         }
 
         .quiz-header {
-            animation: fadeIn 0.6s ease-out;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes slideOut {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(50px); }
+        }
+
+        .correct-answer {
+            background: linear-gradient(to right, #d4edda, #c3e6cb) !important;
+            animation: pulse 0.5s ease;
+        }
+
+        .wrong-answer {
+            background: linear-gradient(to right, #f8d7da, #f5c6cb) !important;
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
         }
 
         .confetti-container {
@@ -254,6 +298,10 @@
             text-align: center;
             width: 90%;
             max-width: 650px;
+            background: rgba(0, 0, 0, 0.75);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
         @media (max-width: 640px) {
@@ -318,7 +366,8 @@
         }
     </style>
 </head>
-<body class="bg-gradient-to-b from-blue-200 to-blue-500">
+<body>
+    <div id="particles-js"></div>
     <div class="confetti-container"></div>
     <div class="quiz-container">
         <div id="topic-selection">
@@ -337,10 +386,10 @@
         <div id="quiz-header" class="quiz-header" style="display:none;">
             <h2 id="question">Question text</h2>
             <ul>
-                <li><label><input type="radio" name="answer" class="answer" id="a"><span id="a_text">Answer A</span></label></li>
-                <li><label><input type="radio" name="answer" class="answer" id="b"><span id="b_text">Answer B</span></label></li>
-                <li><label><input type="radio" name="answer" class="answer" id="c"><span id="c_text">Answer C</span></label></li>
-                <li><label><input type="radio" name="answer" class="answer" id="d"><span id="d_text">Answer D</span></label></li>
+                <li><label for="a"><input type="radio" name="answer" class="answer" id="a"><span id="a_text">Answer A</span></label></li>
+                <li><label for="b"><input type="radio" name="answer" class="answer" id="b"><span id="b_text">Answer B</span></label></li>
+                <li><label for="c"><input type="radio" name="answer" class="answer" id="c"><span id="c_text">Answer C</span></label></li>
+                <li><label for="d"><input type="radio" name="answer" class="answer" id="d"><span id="d_text">Answer D</span></label></li>
             </ul>
             <div id="answer-feedback" style="display:none; margin: 10px 0; padding: 10px; border-radius: 5px;"></div>
             <div id="answer-explanation" style="display:none;"></div>
@@ -363,6 +412,10 @@
         <button id="restart" style="display:none;" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Restart</button>
         <div id="error-message" style="display:none;"></div>
     </div>
+
+    <audio id="correct-sound" src="https://www.soundjay.com/buttons/beep-01a.mp3"></audio>
+    <audio id="wrong-sound" src="https://www.soundjay.com/buttons/beep-02.mp3"></audio>
+    <audio id="finish-sound" src="https://www.soundjay.com/misc/sounds/magic-chime-01.mp3"></audio>
 
     <script>
         const quizHeader = document.getElementById('quiz-header');
@@ -390,6 +443,9 @@
         const scoreDisplay = document.getElementById('score-display');
         const currentScoreEl = document.getElementById('current-score');
         const totalQuestionsEl = document.getElementById('total-questions');
+        const correctSound = document.getElementById('correct-sound');
+        const wrongSound = document.getElementById('wrong-sound');
+        const finishSound = document.getElementById('finish-sound');
         
         let currentQuestion = 0;
         let score = 0;
@@ -523,35 +579,41 @@
         }
 
         function loadQuestion() {
-            deselectAnswers();
-            const currentQuizData = quizData[currentQuestion];
-            questionEl.innerText = currentQuizData.question;
-            const answers = [
-                currentQuizData.correct_answer,
-                ...currentQuizData.incorrect_answers
-            ].sort(() => Math.random() - 0.5);
-            a_text.innerText = answers[0];
-            b_text.innerText = answers[1];
-            c_text.innerText = answers[2];
-            d_text.innerText = answers[3];
-            
-            if (userAnswers[currentQuestion]) {
-                document.querySelector(`#${userAnswers[currentQuestion].id}`).checked = true;
-                showAnswerFeedback();
-                showExplanation();
-            } else {
-                answerFeedback.style.display = 'none';
-                answerExplanation.style.display = 'none';
-            }
-            
-            updateProgressBar();
-            updateButtonStates();
-            startTimer();
+            quizHeader.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => {
+                deselectAnswers();
+                const currentQuizData = quizData[currentQuestion];
+                questionEl.innerText = currentQuizData.question;
+                const answers = [
+                    currentQuizData.correct_answer,
+                    ...currentQuizData.incorrect_answers
+                ].sort(() => Math.random() - 0.5);
+                a_text.innerText = answers[0];
+                b_text.innerText = answers[1];
+                c_text.innerText = answers[2];
+                d_text.innerText = answers[3];
+                
+                if (userAnswers[currentQuestion]) {
+                    document.querySelector(`#${userAnswers[currentQuestion].id}`).checked = true;
+                    showAnswerFeedback();
+                } else {
+                    answerFeedback.style.display = 'none';
+                    answerExplanation.style.display = 'none';
+                }
+                
+                updateProgressBar();
+                updateButtonStates();
+                startTimer();
+                quizHeader.style.animation = 'slideIn 0.5s ease-out';
+            }, 300);
         }
 
         function deselectAnswers() {
             const answersEls = document.querySelectorAll('.answer');
-            answersEls.forEach(answerEl => answerEl.checked = false);
+            answersEls.forEach(answerEl => {
+                answerEl.checked = false;
+                answerEl.parentElement.classList.remove('correct-answer', 'wrong-answer');
+            });
         }
 
         function getSelected() {
@@ -568,13 +630,18 @@
         function showAnswerFeedback() {
             const currentQuizData = quizData[currentQuestion];
             const selectedAnswer = getSelectedAnswerText();
+            const selectedLabel = document.querySelector(`label[for="${getSelected()}"]`);
             answerFeedback.style.display = 'block';
             if (selectedAnswer === currentQuizData.correct_answer) {
                 answerFeedback.style.backgroundColor = '#d4edda';
                 answerFeedback.innerText = `Correct! The answer is: ${currentQuizData.correct_answer}`;
+                selectedLabel.classList.add('correct-answer');
+                correctSound.play();
             } else {
                 answerFeedback.style.backgroundColor = '#f8d7da';
                 answerFeedback.innerText = `Wrong. Correct answer: ${currentQuizData.correct_answer}`;
+                selectedLabel.classList.add('wrong-answer');
+                wrongSound.play();
             }
             showExplanation();
         }
@@ -655,14 +722,17 @@
             resultsDiv.style.display = 'block';
             restartBtn.style.display = 'block';
             errorMessageDiv.style.display = 'none';
-            resultsDiv.innerText = `You scored ${score}/${quizData.length}!`;
+            resultsDiv.innerHTML = `You scored ${score}/${quizData.length}!<br><small>Check the leaderboard below!</small>`;
+            finishSound.play();
+            saveScore();
+            displayLeaderboard();
             startConfetti();
         }
 
         function startConfetti() {
-            const duration = 15 * 1000;
+            const duration = 10 * 1000;
             const animationEnd = Date.now() + duration;
-            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+            const defaults = { startVelocity: 40, spread: 360, ticks: 80, zIndex: 0 };
             function randomInRange(min, max) {
                 return Math.random() * (max - min) + min;
             }
@@ -671,22 +741,41 @@
                 if (timeLeft <= 0) {
                     return clearInterval(interval);
                 }
-                const particleCount = 50 * (timeLeft / duration);
+                const particleCount = 100 * (timeLeft / duration);
                 confetti({
                     ...defaults,
                     particleCount,
-                    origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+                    origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+                    colors: ['#ff6ec7', '#00f2fe', '#4facfe']
                 });
                 confetti({
                     ...defaults,
                     particleCount,
-                    origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+                    origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+                    shapes: ['star', 'circle']
                 });
-            }, 250);
+            }, 200);
         }
 
         function stopConfetti() {
             confetti.reset();
+        }
+
+        function saveScore() {
+            const leaderboard = JSON.parse(localStorage.getItem('quizLeaderboard') || '[]');
+            leaderboard.push({ score, topic: selectedTopic, date: new Date().toLocaleString() });
+            leaderboard.sort((a, b) => b.score - a.score);
+            localStorage.setItem('quizLeaderboard', JSON.stringify(leaderboard.slice(0, 5)));
+        }
+
+        function displayLeaderboard() {
+            const leaderboard = JSON.parse(localStorage.getItem('quizLeaderboard') || '[]');
+            const leaderboardDiv = document.createElement('div');
+            leaderboardDiv.innerHTML = '<h3 class="text-lg font-bold mt-4">Leaderboard</h3>' +
+                '<ul class="text-left">' +
+                leaderboard.map((entry, i) => `<li>${i + 1}. ${entry.score}/${quizData.length} - ${entry.topic} (${entry.date})</li>`).join('') +
+                '</ul>';
+            resultsDiv.appendChild(leaderboardDiv);
         }
 
         previousBtn.addEventListener('click', () => {
@@ -737,8 +826,28 @@
             submittedQuestions.clear();
             stopConfetti();
         });
+
+        particlesJS('particles-js', {
+            particles: {
+                number: { value: 80, density: { enable: true, value_area: 800 } },
+                color: { value: '#ffffff' },
+                shape: { type: 'circle' },
+                opacity: { value: 0.5, random: true },
+                size: { value: 3, random: true },
+                line_linked: { enable: false },
+                move: { enable: true, speed: 2, direction: 'none', random: true }
+            },
+            interactivity: {
+                detect_on: 'canvas',
+                events: { onhover: { enable: true, mode: 'repulse' }, onclick: { enable: true, mode: 'push' } },
+                modes: { repulse: { distance: 100 }, push: { particles_nb: 4 } }
+            },
+            retina_detect: true
+        });
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5
+
+.0/dist/confetti.browser.min.js"></script>
     <footer>Copyright © 2024 - 2025 BidhanAcharya®. All rights reserved.</footer>
 </body>
 </html>
